@@ -80,7 +80,7 @@ class MeshtasticBot:
                 elif message == '#test':
                     self.send_private_message(from_id, "Received a test message")
                 else:
-                    self.send_private_message(from_id, "Unknown command. Available commands: #test, #weather <latitude> <longitude> [hours]")
+                    self.send_private_message(to_id=from_id, message="Unknown command. Available commands: #test, #weather <latitude> <longitude> [hours]")
         except Exception as e:
             print(f"Error processing message: {e}")
 
@@ -103,45 +103,17 @@ class MeshtasticBot:
             message (str): The message to send.
         """
         try:
-            # Meshtastic typically has a limit of around 500 bytes per message
+            # Meshtastic typically has a limit of around 200 bytes per message as set by the user
             MAX_PAYLOAD_SIZE = 200  # Adjust based on your device's configuration
 
             if len(message.encode('utf-8')) <= MAX_PAYLOAD_SIZE:
                 self.interface.sendText(message, destinationId=to_id)
                 print(f"Sent message to {to_id}: {message[:50]}{'...' if len(message) > 50 else ''}")
             else:
-                # Split the message into chunks
-                chunks = self.split_message(message, MAX_PAYLOAD_SIZE)
-                for chunk in chunks:
-                    self.interface.sendText(chunk, destinationId=to_id)
-                    print(f"Sent message chunk to {to_id}: {chunk[:50]}{'...' if len(chunk) > 50 else ''}")
-                    time.sleep(0.5)  # Slight delay to prevent message collision
+                # Since we're sending batches, ensure each batch is within the limit
+                print(f"Batch message exceeds max payload size and cannot be sent: {message}")
         except Exception as e:
             print(f"Error sending message: {e}")
-
-    def split_message(self, message, max_size):
-        """
-        Splits a long message into smaller chunks based on the maximum size.
-
-        Args:
-            message (str): The full message to split.
-            max_size (int): The maximum size of each chunk in bytes.
-
-        Returns:
-            List[str]: A list of message chunks.
-        """
-        encoded_message = message.encode('utf-8')
-        chunks = []
-        start = 0
-        while start < len(encoded_message):
-            end = start + max_size
-            # Ensure we don't split multi-byte characters
-            while end < len(encoded_message) and (encoded_message[end] & 0xC0) == 0x80:
-                end -= 1
-            chunk = encoded_message[start:end].decode('utf-8', errors='ignore')
-            chunks.append(chunk)
-            start = end
-        return chunks
 
     def handle_weather_command(self, to_id, message):
         """
@@ -168,7 +140,7 @@ class MeshtasticBot:
                 if forecast_hours <= 0:
                     raise ValueError("Forecast hours must be a positive integer.")
 
-            # Optional: Define a maximum forecast hours limit to prevent excessively long messages
+            # Define a maximum forecast hours limit to prevent excessively long messages
             MAX_FORECAST_HOURS = 48
             if forecast_hours > MAX_FORECAST_HOURS:
                 forecast_hours = MAX_FORECAST_HOURS
@@ -185,21 +157,28 @@ class MeshtasticBot:
                 self.send_private_message(to_id, "No forecast data available for the specified period.")
                 return
 
-            # Format the forecast data
-            forecast_message = (
+            # Optional: Send a summary message first
+            summary_message = (
                 f"🌤 **Weather Forecast for Next {forecast_hours} Hours**\n"
                 f"📍 **Location:** {latitude}, {longitude}\n\n"
             )
+            self.send_private_message(to_id, summary_message)
 
-            for forecast in forecasts:
-                forecast_message += (
-                    f"🕒 {forecast['time']} | 🌡 {forecast['temperature_2m']}°C | "
-                    f"🌧 {forecast['precipitation']}mm | 💨 {forecast['windspeed_10m']}km/h | "
-                    f"☁️ {forecast['weather_description']}\n"
-                )
+            # Define batch size (number of forecasts per message)
+            BATCH_SIZE = 2
 
-            # Send the message
-            self.send_private_message(to_id, forecast_message)
+            # Split forecasts into batches of 2
+            for i in range(0, len(forecasts), BATCH_SIZE):
+                batch = forecasts[i:i+BATCH_SIZE]
+                batch_message = ""
+                for forecast in batch:
+                    batch_message += (
+                        f"🕒 {forecast['time']} | 🌡 {forecast['temperature_2m']}°C | "
+                        f"🌧 {forecast['precipitation']}mm | 💨 {forecast['windspeed_10m']}km/h | "
+                        f"☁️ {forecast['weather_description']}\n"
+                    )
+                self.send_private_message(to_id, batch_message)
+                time.sleep(3)  # Adjusted delay to 1 second between batches
 
         except ValueError as ve:
             self.send_private_message(to_id, f"Invalid input: {ve}")
