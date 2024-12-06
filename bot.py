@@ -170,13 +170,15 @@ class MeshtasticBot:
             # Split forecasts into batches of 2
             for i in range(0, len(forecasts), BATCH_SIZE):
                 batch = forecasts[i:i+BATCH_SIZE]
-                batch_message = ""
-                for forecast in batch:
-                    batch_message += (
-                        f"🕒 {forecast['time']} | 🌡 {forecast['temperature_2m']}°C | "
-                        f"🌧 {forecast['precipitation']}mm | 💨 {forecast['windspeed_10m']}km/h | "
-                        f"☁️ {forecast['weather_description']}\n"
-                    )
+                # Collect forecast lines without adding an extra newline at the end
+                forecast_lines = [
+                    f"🕒 {forecast['time']} | 🌡 {forecast['temperature_2m']}°C | "
+                    f"🌧 {forecast['precipitation']}mm | 💨 {forecast['windspeed_10m']}km/h | "
+                    f"☁️ {forecast['weather_description']}"
+                    for forecast in batch
+                ]
+                # Join the forecast lines with a single newline
+                batch_message = "\n".join(forecast_lines)
                 self.send_private_message(to_id, batch_message)
                 time.sleep(3)  # Adjusted delay to 1 second between batches
 
