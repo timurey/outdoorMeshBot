@@ -5,7 +5,7 @@ from pubsub import pub
 import time
 import argparse
 
-# Import the WeatherForecast class from weather.py
+# Import the updated WeatherForecast class from weather.py
 from weather import WeatherForecast
 
 class MeshtasticBot:
@@ -80,7 +80,7 @@ class MeshtasticBot:
                 elif message == '#test':
                     self.send_private_message(from_id, "Received a test message")
                 else:
-                    self.send_private_message(from_id, "Unknown command. Available commands: #test, #weather <latitude> <longitude>")
+                    self.send_private_message(from_id, "Unknown command. Available commands: #test, #weather <latitude> <longitude> [hours]")
         except Exception as e:
             print(f"Error processing message: {e}")
 
@@ -103,66 +103,106 @@ class MeshtasticBot:
             message (str): The message to send.
         """
         try:
-            self.interface.sendText(message, destinationId=to_id)
-            print(f"Sent message to {to_id}: {message[:50]}{'...' if len(message) > 50 else ''}")
+            # Meshtastic typically has a limit of around 500 bytes per message
+            MAX_PAYLOAD_SIZE = 200  # Adjust based on your device's configuration
+
+            if len(message.encode('utf-8')) <= MAX_PAYLOAD_SIZE:
+                self.interface.sendText(message, destinationId=to_id)
+                print(f"Sent message to {to_id}: {message[:50]}{'...' if len(message) > 50 else ''}")
+            else:
+                # Split the message into chunks
+                chunks = self.split_message(message, MAX_PAYLOAD_SIZE)
+                for chunk in chunks:
+                    self.interface.sendText(chunk, destinationId=to_id)
+                    print(f"Sent message chunk to {to_id}: {chunk[:50]}{'...' if len(chunk) > 50 else ''}")
+                    time.sleep(0.5)  # Slight delay to prevent message collision
         except Exception as e:
             print(f"Error sending message: {e}")
+
+    def split_message(self, message, max_size):
+        """
+        Splits a long message into smaller chunks based on the maximum size.
+
+        Args:
+            message (str): The full message to split.
+            max_size (int): The maximum size of each chunk in bytes.
+
+        Returns:
+            List[str]: A list of message chunks.
+        """
+        encoded_message = message.encode('utf-8')
+        chunks = []
+        start = 0
+        while start < len(encoded_message):
+            end = start + max_size
+            # Ensure we don't split multi-byte characters
+            while end < len(encoded_message) and (encoded_message[end] & 0xC0) == 0x80:
+                end -= 1
+            chunk = encoded_message[start:end].decode('utf-8', errors='ignore')
+            chunks.append(chunk)
+            start = end
+        return chunks
 
     def handle_weather_command(self, to_id, message):
         """
         Handles the #weather command by fetching and sending weather data.
 
-        Expected command format: #weather <latitude> <longitude>
+        Expected command format: #weather <latitude> <longitude> [hours]
 
         Args:
             to_id (int): The destination user ID.
             message (str): The received message containing the command.
         """
         parts = message.split()
-        if len(parts) != 3:
-            self.send_private_message(to_id, "Usage: #weather <latitude> <longitude>")
+        if len(parts) not in [3, 4]:
+            self.send_private_message(to_id, "Usage: #weather <latitude> <longitude> [hours]")
             return
 
         try:
             latitude = float(parts[1])
             longitude = float(parts[2])
+            forecast_hours = 24  # Default value
 
-            print(f"Fetching weather for Latitude: {latitude}, Longitude: {longitude}")
+            if len(parts) == 4:
+                forecast_hours = int(parts[3])
+                if forecast_hours <= 0:
+                    raise ValueError("Forecast hours must be a positive integer.")
+
+            # Optional: Define a maximum forecast hours limit to prevent excessively long messages
+            MAX_FORECAST_HOURS = 48
+            if forecast_hours > MAX_FORECAST_HOURS:
+                forecast_hours = MAX_FORECAST_HOURS
+                self.send_private_message(to_id, f"Maximum forecast hours limited to {MAX_FORECAST_HOURS} hours.")
+
+            print(f"Fetching weather for Latitude: {latitude}, Longitude: {longitude}, Hours: {forecast_hours}")
 
             # Create an instance of WeatherForecast
             weather_forecast = WeatherForecast(latitude=latitude, longitude=longitude)
-            weather_forecast.fetch_forecast()
-            forecasts = weather_forecast.get_next_24_hours_forecast()
+            weather_forecast.fetch_forecast(forecast_hours=forecast_hours)
+            forecasts = weather_forecast.get_forecast(forecast_hours=forecast_hours)
 
             if not forecasts:
-                self.send_private_message(to_id, "No forecast data available for the next 24 hours.")
+                self.send_private_message(to_id, "No forecast data available for the specified period.")
                 return
 
             # Format the forecast data
             forecast_message = (
-                f"🌤 **Weather Forecast for the Next 24 Hours**\n"
+                f"🌤 **Weather Forecast for Next {forecast_hours} Hours**\n"
                 f"📍 **Location:** {latitude}, {longitude}\n\n"
             )
 
             for forecast in forecasts:
                 forecast_message += (
-                    f"🕒 **Time:** {forecast['time']}\n"
-                    f"🌡 **Temperature:** {forecast['temperature_2m']}°C\n"
-                    f"🌧 **Precipitation:** {forecast['precipitation']} mm\n"
-                    f"💨 **Wind Speed:** {forecast['windspeed_10m']} km/h\n"
-                    f"🧭 **Wind Direction:** {forecast['winddirection_10m']}°\n"
-                    f"☁️ **Condition:** {forecast['weather_description']}\n"
-                    "----------------------------------------\n"
+                    f"🕒 {forecast['time']} | 🌡 {forecast['temperature_2m']}°C | "
+                    f"🌧 {forecast['precipitation']}mm | 💨 {forecast['windspeed_10m']}km/h | "
+                    f"☁️ {forecast['weather_description']}\n"
                 )
 
-            # Optional: Truncate the message if it's too long
-            if len(forecast_message) > 2000:
-                forecast_message = forecast_message[:1997] + "..."
-
+            # Send the message
             self.send_private_message(to_id, forecast_message)
 
-        except ValueError:
-            self.send_private_message(to_id, "Invalid latitude or longitude. Please provide numeric values.")
+        except ValueError as ve:
+            self.send_private_message(to_id, f"Invalid input: {ve}")
         except Exception as e:
             self.send_private_message(to_id, f"Error fetching weather data: {e}")
 
