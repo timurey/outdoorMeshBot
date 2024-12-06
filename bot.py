@@ -4,10 +4,6 @@ import meshtastic.tcp_interface
 from pubsub import pub
 import time
 import argparse
-import re  # For optional enhanced command parsing
-
-# Import WeatherFetcher
-from weather_request import WeatherFetcher
 
 class MeshtasticBot:
     def __init__(self, connection_type='serial', hostname=None, serial_port=None):
@@ -38,20 +34,9 @@ class MeshtasticBot:
                 message = packet.get('decoded', {}).get('text', '').strip()
                 from_id = packet.get('fromId')
                 
-                # Define command patterns (optional)
-                test_pattern = re.compile(r'^#test$', re.IGNORECASE)
-                weather_pattern = re.compile(r'^#weather\s+(.+)$', re.IGNORECASE)
-                
-                # Check for #test command
-                if test_pattern.match(message):
+                # Handle commands
+                if message == '#test':
                     self.send_private_message(from_id, "receive a test message")
-                else:
-                    weather_match = weather_pattern.match(message)
-                    if weather_match:
-                        location = weather_match.group(1).strip()
-                        weather_fetcher = WeatherFetcher(location)
-                        weather_data = weather_fetcher.get_weather()
-                        self.send_private_message(from_id, weather_data)
         except Exception as e:
             print(f"Error processing message: {e}")
 
