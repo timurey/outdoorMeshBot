@@ -7,7 +7,6 @@ import argparse
 
 # Import the updated WeatherForecast class from weather.py
 from weather import WeatherForecast
-
 class MeshtasticBot:
     def __init__(self, connection_type='serial', hostname=None, serial_port=None):
         """
@@ -78,7 +77,8 @@ class MeshtasticBot:
                 if message.startswith('#weather'):
                     self.handle_weather_command(from_id, message)
                 elif message == '#test':
-                    self.send_private_message(from_id, "Received a test message")
+                    response_message = f"Received a test message from your nodeID {from_id}"
+                    self.send_private_message(from_id, response_message)
                 else:
                     self.send_private_message(to_id=from_id, message="Unknown command. Available commands: #test, #weather <latitude> <longitude> [hours]")
         except Exception as e:
@@ -109,6 +109,7 @@ class MeshtasticBot:
             if len(message.encode('utf-8')) <= MAX_PAYLOAD_SIZE:
                 self.interface.sendText(message, destinationId=to_id)
                 print(f"Sent message to {to_id}: {message[:50]}{'...' if len(message) > 50 else ''}")
+                time.sleep(1)
             else:
                 # Since we're sending batches, ensure each batch is within the limit
                 print(f"Batch message exceeds max payload size and cannot be sent: {message}")
