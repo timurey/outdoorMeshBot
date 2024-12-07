@@ -1,235 +1,85 @@
 import meshtastic
 import meshtastic.serial_interface
-import meshtastic.tcp_interface
 from pubsub import pub
 import time
 import argparse
-
-# Import the updated WeatherForecast class from weather.py
 from weather import WeatherForecast
+
 class MeshtasticBot:
     def __init__(self, connection_type='serial', hostname=None, serial_port=None):
-        """
-        Initializes the MeshtasticBot with the specified connection parameters.
-
-        Args:
-            connection_type (str): Type of connection ('serial' or 'wifi').
-            hostname (str, optional): Hostname for WiFi connection.
-            serial_port (str, optional): Serial port path for serial connection.
-        """
         self.interface = None
         self.setup_connection(connection_type, hostname, serial_port)
         self.setup_subscribers()
 
     def setup_connection(self, connection_type, hostname, serial_port):
-        """
-        Sets up the connection to the Meshtastic device based on the connection type.
-
-        Args:
-            connection_type (str): Type of connection ('serial' or 'wifi').
-            hostname (str, optional): Hostname for WiFi connection.
-            serial_port (str, optional): Serial port path for serial connection.
-
-        Raises:
-            ValueError: If required parameters for the connection type are missing.
-            Exception: If the connection fails.
-        """
-        try:
-            if connection_type == 'wifi':
-                if not hostname:
-                    raise ValueError("Hostname is required for WiFi connection")
-                print(f"Connecting via WiFi to {hostname}...")
-                self.interface = meshtastic.tcp_interface.TCPInterface(hostname=hostname)
-            else:  # serial
-                if not serial_port:
-                    raise ValueError("Serial port is required for serial connection")
-                print(f"Connecting via Serial to {serial_port}...")
-                self.interface = meshtastic.serial_interface.SerialInterface(devPath=serial_port)
-            print("Connection established successfully.")
-        except Exception as e:
-            print(f"Failed to connect: {e}")
-            raise
+        if connection_type == 'wifi':
+            self.interface = meshtastic.tcp_interface.TCPInterface(hostname=hostname)
+        else:
+            self.interface = meshtastic.serial_interface.SerialInterface(devPath=serial_port)
 
     def setup_subscribers(self):
-        """
-        Sets up the subscribers for Meshtastic events.
-        """
         pub.subscribe(self.on_receive, "meshtastic.receive")
         pub.subscribe(self.on_connection, "meshtastic.connection.established")
 
     def on_receive(self, packet, interface):
-        """
-        Callback function triggered when a message is received.
-
-        Args:
-            packet (dict): The received packet data.
-            interface: The Meshtastic interface instance.
-        """
-        try:
-            # Check if it's a text message
-            if packet.get('decoded', {}).get('portnum') == 'TEXT_MESSAGE_APP':
-                message = packet.get('decoded', {}).get('text', '').strip()
-                from_id = packet.get('fromId')
-                
-                print(f"Received message from {from_id}: {message}")
-                
-                # Handle commands
-                if message.startswith('#weather'):
-                    self.handle_weather_command(from_id, message)
-                elif message == '#test':
-                    response_message = f"Received a test message from your nodeID {from_id}"
-                    self.send_private_message(from_id, response_message)
-                else:
-                    self.send_private_message(to_id=from_id, message="Unknown command. Available commands: #test, #weather <latitude> <longitude> [hours]")
-        except Exception as e:
-            print(f"Error processing message: {e}")
+        from_id = packet.get('fromId')
+        if packet.get('decoded', {}).get('portnum') == 'TEXT_MESSAGE_APP':
+            message = packet.get('decoded', {}).get('text', '').strip()
+            print(f"Received message from {from_id}: {message}")
+            if message.startswith('#weather'):
+                self.handle_weather_command(from_id, message)
+            elif message == '#test':
+                self.send_private_message(from_id, f"Test message from your nodeID {from_id}")
+            else:
+                self.send_private_message(from_id, "Unknown command")
 
     def on_connection(self, interface, topic=pub.AUTO_TOPIC):
-        """
-        Callback function triggered when a connection is established.
-
-        Args:
-            interface: The Meshtastic interface instance.
-            topic: The topic of the message.
-        """
         print("Connected to Meshtastic device")
 
     def send_private_message(self, to_id, message):
-        """
-        Sends a private message to a specific user.
-
-        Args:
-            to_id (int): The destination user ID.
-            message (str): The message to send.
-        """
-        try:
-            # Meshtastic typically has a limit of around 200 bytes per message as set by the user
-            MAX_PAYLOAD_SIZE = 200  # Adjust based on your device's configuration
-
-            if len(message.encode('utf-8')) <= MAX_PAYLOAD_SIZE:
-                self.interface.sendText(message, destinationId=to_id)
-                print(f"Sent message to {to_id}: {message[:50]}{'...' if len(message) > 50 else ''}")
-                time.sleep(1)
-            else:
-                # Since we're sending batches, ensure each batch is within the limit
-                print(f"Batch message exceeds max payload size and cannot be sent: {message}")
-        except Exception as e:
-            print(f"Error sending message: {e}")
+        self.interface.sendText(message, destinationId=to_id)
+        print(f"Sent message to {to_id}: {message[:50]}")
 
     def handle_weather_command(self, to_id, message):
-        """
-        Handles the #weather command by fetching and sending weather data.
-
-        Expected command format: #weather <latitude> <longitude> [hours]
-
-        Args:
-            to_id (int): The destination user ID.
-            message (str): The received message containing the command.
-        """
         parts = message.split()
         if len(parts) not in [3, 4]:
             self.send_private_message(to_id, "Usage: #weather <latitude> <longitude> [hours]")
             return
 
-        try:
-            latitude = float(parts[1])
-            longitude = float(parts[2])
-            forecast_hours = 24  # Default value
+        latitude, longitude = float(parts[1]), float(parts[2])
+        forecast_hours = int(parts[3]) if len(parts) == 4 else 24
 
-            if len(parts) == 4:
-                forecast_hours = int(parts[3])
-                if forecast_hours <= 0:
-                    raise ValueError("Forecast hours must be a positive integer.")
+        weather_forecast = WeatherForecast(latitude=latitude, longitude=longitude)
+        weather_forecast.fetch_forecast(forecast_hours)
+        forecasts = weather_forecast.get_forecast(forecast_hours)
 
-            # Define a maximum forecast hours limit to prevent excessively long messages
-            MAX_FORECAST_HOURS = 48
-            if forecast_hours > MAX_FORECAST_HOURS:
-                forecast_hours = MAX_FORECAST_HOURS
-                self.send_private_message(to_id, f"Maximum forecast hours limited to {MAX_FORECAST_HOURS} hours.")
+        if not forecasts:
+            self.send_private_message(to_id, "No forecast data available.")
+            return
 
-            print(f"Fetching weather for Latitude: {latitude}, Longitude: {longitude}, Hours: {forecast_hours}")
+        summary_message = f"Weather Forecast for {latitude}, {longitude} ({forecast_hours} hours)"
+        self.send_private_message(to_id, summary_message)
 
-            # Create an instance of WeatherForecast
-            weather_forecast = WeatherForecast(latitude=latitude, longitude=longitude)
-            weather_forecast.fetch_forecast(forecast_hours=forecast_hours)
-            forecasts = weather_forecast.get_forecast(forecast_hours=forecast_hours)
-
-            if not forecasts:
-                self.send_private_message(to_id, "No forecast data available for the specified period.")
-                return
-
-            # Optional: Send a summary message first
-            summary_message = (
-                f"🌤 **Weather Forecast for Next {forecast_hours} Hours**\n"
-                f"📍 **Location:** {latitude}, {longitude}\n\n"
-            )
-            self.send_private_message(to_id, summary_message)
-
-            # Define batch size (number of forecasts per message)
-            BATCH_SIZE = 2
-
-            # Split forecasts into batches of 2
-            for i in range(0, len(forecasts), BATCH_SIZE):
-                batch = forecasts[i:i+BATCH_SIZE]
-                # Collect forecast lines without adding an extra newline at the end
-                forecast_lines = [
-                    f"🕒 {forecast['time']} | 🌡 {forecast['temperature_2m']}°C | "
-                    f"🌧 {forecast['precipitation']}mm | 💨 {forecast['windspeed_10m']}km/h | "
-                    f"☁️ {forecast['weather_description']}"
-                    for forecast in batch
-                ]
-                # Join the forecast lines with a single newline
-                batch_message = "\n".join(forecast_lines)
-                self.send_private_message(to_id, batch_message)
-                time.sleep(3)  # Adjusted delay to 1 second between batches
-
-        except ValueError as ve:
-            self.send_private_message(to_id, f"Invalid input: {ve}")
-        except Exception as e:
-            self.send_private_message(to_id, f"Error fetching weather data: {e}")
+        for forecast in forecasts:
+            forecast_message = f"🕒 {forecast['time']} | 🌡 {forecast['temperature_2m']}°C | 🌧 {forecast['precipitation']}mm"
+            self.send_private_message(to_id, forecast_message)
+            time.sleep(1)
 
     def run(self):
-        """
-        Runs the bot, keeping it active and responsive to incoming messages.
-        """
-        try:
-            print("Bot is running. Press Ctrl+C to exit.")
-            while True:
-                time.sleep(1)
-        except KeyboardInterrupt:
-            print("\nBot shutting down...")
-        finally:
-            if self.interface:
-                self.interface.close()
-                print("Connection closed.")
+        print("Bot is running. Press Ctrl+C to exit.")
+        while True:
+            time.sleep(1)
 
 def main():
-    """
-    The main entry point for the bot. Parses command-line arguments and starts the bot.
-    """
     parser = argparse.ArgumentParser(description='Meshtastic Bot with Weather Functionality')
-    parser.add_argument('--connection-type', choices=['serial', 'wifi'], default='serial',
-                      help='Connection type (serial or wifi). Default is serial.')
-    parser.add_argument('--hostname', help='Hostname for WiFi connection.')
-    parser.add_argument('--serial-port', help='Serial port path (e.g., /dev/ttyUSB0). Required for serial connection.')
-    
+    parser.add_argument('--connection-type', choices=['serial', 'wifi'], default='serial')
+    parser.add_argument('--hostname')
+    parser.add_argument('--serial-port')
+
     args = parser.parse_args()
-    
-    # Validate arguments based on connection type
-    if args.connection_type == 'wifi' and not args.hostname:
-        parser.error("--hostname is required for WiFi connection.")
-    if args.connection_type == 'serial' and not args.serial_port:
-        parser.error("--serial-port is required for serial connection.")
-    
-    try:
-        bot = MeshtasticBot(
-            connection_type=args.connection_type,
-            hostname=args.hostname,
-            serial_port=args.serial_port
-        )
-        bot.run()
-    except Exception as e:
-        print(f"Bot failed to start: {e}")
+
+    bot = MeshtasticBot(connection_type=args.connection_type, hostname=args.hostname, serial_port=args.serial_port)
+    bot.run()
 
 if __name__ == "__main__":
     main()
