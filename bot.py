@@ -49,7 +49,7 @@ class MeshtasticBot:
             return
 
         latitude, longitude = float(parts[1]), float(parts[2])
-        forecast_hours = int(parts[3]) if len(parts) == 4 else 24
+        forecast_hours = int(parts[3]) if len(parts) == 4 else 6
 
         weather_forecast = WeatherForecast(latitude=latitude, longitude=longitude)
         weather_forecast.fetch_forecast(forecast_hours)
