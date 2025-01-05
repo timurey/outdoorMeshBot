@@ -44,12 +44,27 @@ class MeshtasticBot:
 
     def handle_weather_command(self, to_id, message):
         parts = message.split()
-        if len(parts) not in [3, 4]:
+        
+        if len(parts) == 1:
+            node_info = self.interface.nodes.get(to_id)
+            if node_info and 'position' in node_info:
+                position = node_info['position']
+                if 'latitude' in position and 'longitude' in position:
+                    latitude = position['latitude']
+                    longitude = position['longitude']
+                else:
+                    self.send_private_message(to_id, "Could not find your location. Please provide coordinates: #weather <latitude> <longitude> [hours]")
+                    return
+            else:
+                self.send_private_message(to_id, "Could not find your location. Please provide coordinates: #weather <latitude> <longitude> [hours]")
+                return
+        elif len(parts) in [3, 4]:
+            latitude, longitude = float(parts[1]), float(parts[2])
+        else:
             self.send_private_message(to_id, "Usage: #weather <latitude> <longitude> [hours]")
             return
 
-        latitude, longitude = float(parts[1]), float(parts[2])
-        forecast_hours = int(parts[3]) if len(parts) == 4 else 6
+        forecast_hours = int(parts[3]) if len(parts) == 4 else 3
 
         weather_forecast = WeatherForecast(latitude=latitude, longitude=longitude)
         weather_forecast.fetch_forecast(forecast_hours)
