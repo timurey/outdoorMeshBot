@@ -1,5 +1,6 @@
 import meshtastic
 import meshtastic.serial_interface
+from meshtastic import tcp_interface
 from pubsub import pub
 import time
 import argparse
@@ -13,7 +14,7 @@ class MeshtasticBot:
 
     def setup_connection(self, connection_type, hostname, serial_port):
         if connection_type == 'wifi':
-            self.interface = meshtastic.tcp_interface.TCPInterface(hostname=hostname)
+            self.interface = tcp_interface.TCPInterface(hostname=hostname)
         else:
             self.interface = meshtastic.serial_interface.SerialInterface(devPath=serial_port)
 
