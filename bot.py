@@ -28,9 +28,9 @@ class MeshtasticBot:
             message = packet.get('decoded', {}).get('text', '').strip()
             print(f"Received message from {from_id}: {message}")
             if message.startswith('#'):
-                if message.startswith('#weather'):
+                if message.startswith('#weather') or message.startswith('#天氣') or message.startswith('#天气'):
                     self.handle_weather_command(from_id, message)
-                elif message == '#test':
+                elif message in ('#test', '#測試', '#测试'):
                     self.send_private_message(from_id, f"Test message from your nodeID {from_id}")
                 else:
                     self.send_private_message(from_id, "Unknown command")
