@@ -27,12 +27,13 @@ class MeshtasticBot:
         if packet.get('decoded', {}).get('portnum') == 'TEXT_MESSAGE_APP':
             message = packet.get('decoded', {}).get('text', '').strip()
             print(f"Received message from {from_id}: {message}")
-            if message.startswith('#weather'):
-                self.handle_weather_command(from_id, message)
-            elif message == '#test':
-                self.send_private_message(from_id, f"Test message from your nodeID {from_id}")
-            else:
-                self.send_private_message(from_id, "Unknown command")
+            if message.startswith('#'):
+                if message.startswith('#weather'):
+                    self.handle_weather_command(from_id, message)
+                elif message == '#test':
+                    self.send_private_message(from_id, f"Test message from your nodeID {from_id}")
+                else:
+                    self.send_private_message(from_id, "Unknown command")
 
     def on_connection(self, interface, topic=pub.AUTO_TOPIC):
         print("Connected to Meshtastic device")
