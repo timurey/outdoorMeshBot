@@ -75,12 +75,14 @@ class MeshtasticBot:
             return
 
         summary_message = f"Weather Forecast for {latitude}, {longitude} ({forecast_hours} hours)"
+        time.sleep(5)
         self.send_private_message(to_id, summary_message)
+        time.sleep(5)
 
         for forecast in forecasts:
             forecast_message = f"🕒 {forecast['time']} | 🌡 {forecast['temperature_2m']}°C | 🌧 {forecast['precipitation']}mm"
             self.send_private_message(to_id, forecast_message)
-            time.sleep(1)
+            time.sleep(10)
 
     def run(self):
         print("Bot is running. Press Ctrl+C to exit.")
