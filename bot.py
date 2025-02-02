@@ -42,8 +42,6 @@ class MeshtasticBot:
                 self.send_private_message(from_id, f"Тестовое сообщение от nodeId {from_id}")
             elif comamnd in ('пинг', 'ping'):
                 self.send_private_message(from_id, "понг")
-            else:
-                self.send_private_message(from_id, "#помощь для справки")
 
     def on_connection(self, interface, topic=pub.AUTO_TOPIC):
         print("Connected to Meshtastic device")
