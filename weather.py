@@ -6,7 +6,7 @@ import pytz
 class WeatherForecast:
     """
     A class to retrieve weather forecasts using the Open-Meteo API.
-    The timezone is fixed to UTC+8 (Beijing Time).
+    The timezone is fixed to UTC+8 (Beijing Time)
 
     Attributes:
         latitude (float): Latitude of the location.
@@ -16,7 +16,7 @@ class WeatherForecast:
     BASE_URL = "https://api.open-meteo.com/v1/forecast"
     TIMEZONE = "Asia/Shanghai"  # UTC+8 (Beijing Time)
 
-    def __init__(self, latitude: float, longitude: float):
+    def __init__(self, latitude: float, longitude: float, timezone: str = "Asia/Shanghai"):
         """
         Initializes the WeatherForecast instance with location.
 
@@ -26,6 +26,7 @@ class WeatherForecast:
         """
         self.latitude = latitude
         self.longitude = longitude
+        self.TIMEZONE = timezone
         self.forecast_data: Optional[Dict[str, Any]] = None
 
     def fetch_forecast(self, forecast_hours: int = 24) -> None:
