@@ -1,136 +1,150 @@
+
+
 # Meshtastic Weather Bot - outdoorMeshBot
 
-The **Meshtastic Weather Bot - outdoorMeshBot** is an open-source Python bot that connects to Meshtastic devices via either **WiFi** or **Serial** connection and responds to user weather requests. By leveraging the **Open-Meteo API**, the bot provides real-time weather forecasts, such as temperature, wind speed, precipitation, and weather conditions, for specific geographical coordinates (latitude and longitude) directly through the Meshtastic mesh network. This allows users to obtain weather information even in remote locations where traditional internet connectivity may be unavailable.
+## This is a fork of [https://github.com/hayschan/outdoorMeshBot](https://github.com/hayschan/outdoorMeshBot)
 
-The bot can be customized to suit different use cases, such as providing weather updates for outdoor adventures, remote operations, or just for fun. The bot listens for incoming commands, processes weather requests, and responds with a detailed forecast. It can handle multiple requests at once, ensuring a smooth experience for users in the mesh network.
+## Supports Russian and English commands
 
-## Features
+**Meshtastic Weather Bot - outdoorMeshBot** - это бот, написанный на языке Python, с открытым исходным кодом, который подключается к устройствам Meshtastic через **WiFi** или **Serial** соединение и отвечает на запросы пользователей о погоде. Используя **Open-Meteo API**, бот предоставляет прогнозы погоды в реальном времени, такие как температура, скорость ветра, осадки и погодные условия, для определенных географических координат (широта и долгота) напрямую mesh сеть Meshtastic. Это позволяет пользователям получать информацию о погоде даже в отдаленных местах, где традиционное подключение к Интернету может быть недоступно.
 
-- **Real-time Weather Forecasts**: Provides detailed weather data for any geographical location, using the Open-Meteo API.
-- **Meshtastic Integration**: Uses Meshtastic mesh network to deliver forecasts as private messages.
-- **Supports Two Connection Types**: Can be configured to connect to Meshtastic via **Serial** or **WiFi**.
-- **Customizable Forecast Duration**: Users can request weather data for 24 to 48 hours (default is 24 hours).
-- **Easy Setup**: The bot is easy to set up and requires minimal configuration.
+Бот слушает входящие команды, обрабатывает запросы о погоде и отвечает подробным прогнозом. Он может обрабатывать несколько запросов одновременно, обеспечивая бесперебойную работу пользователей в ячеистой сети.
 
-### Key Commands
+## Особенности
 
-- `#weather <latitude> <longitude> [hours]`: Requests a weather forecast for the given latitude and longitude. Optionally, the number of forecast hours (default: 24) can be specified.
-- `#test`: Sends a confirmation message that the bot is functioning correctly.
+- **Прогнозы погоды в реальном времени**: предоставляет подробные данные о погоде для любого географического местоположения с помощью API Open-Meteo.
+- **Интеграция с Meshtastic**: использует mesh сеть Meshtastic для доставки прогнозов в виде личных сообщений.
+- **Поддержка двух типов подключения**: можно настроить для подключения к устройству Meshtastic через **Последовательный порт** или **WiFi**.
+- **Настраиваемая продолжительность прогноза**: пользователи могут запрашивать данные о погоде на период от 3 часов до 10 дней (по умолчанию 3 часа).
+- **Простая настройка**: бот прост в настройке и требует минимальной настройки.
 
-## Installation
+### Основные команды
+- `#погода`, `#прогноз`, `#weather`, `#forecast` - это команды-синонимы запроса погоды. Можно использовать любую из них следующим образом:
+  `#прогноз <широта> <долгота> [Xч] [Xд] `: запрос прогноза погоды для указанной позиции `<широта> <долгота>`. По умолчанию, возвращается прогноз на 3 дня. Необходимое время можно указать следущими аргументами `_ч` или `_д` (`_h` или `_d` - поддерживаются и английские буквы). Если ваше устройство передает свое местоположение в сеть, то координаты можно не указывать, будут использованы последние известные координаты.
+- `#помощь`, `#help`: краткая справка по работе.
+- `#тест`, `#test`: проверка работоспособности бота
 
-### Prerequisites
+При этом, сообщения отправляются с интервалом 5 секунд.
 
-To run the Meshtastic Weather Bot, you will need the following:
+## Установка
 
-1. **Python 3.x**: The bot is built with Python 3.7 or newer.
-2. **Required Python Libraries**:  
-   - `meshtastic` — To interface with the Meshtastic device.
-   - `pubsub` — To handle asynchronous messaging and events.
-   - `requests` — To fetch weather data from the Open-Meteo API.
-   - `pytz` — For timezone handling (used to ensure all times are returned in the correct timezone, e.g., UTC+8 for Beijing Time).
+### Требования 
 
-Install all dependencies using:
+Для запуска погодного бота Meshtastic вам понадобятся:
+
+1. **Python 3.x**: Бот работает с Python 3.7 или новее.
+2. **Необходимые Python библиотеки**:  
+   - `meshtastic` — Для взаимодействия с Meshtastic устройством.
+   - `pubsub` — Для обработки осинхронно сообщений и событий.
+   - `requests` — Для отправки запросов на Open-Meteo API.
+   - `pytz` — Для работы с timezone (используется для корректной обработки времени).
+
+Установите все зависимости, используя следующую команду:
 
 ```bash
 pip install meshtastic pubsub requests pytz
 ```
 
-### Setup
+### Настройка
 
-1. Clone the repository or download the code.
-2. Install the required dependencies by running the above `pip` command.
+1. Склонируйте репозиторий или скачайте исходный код.
+2. Установите все необходимые зависимости, испулзуя описанную выше `pip` команду.
 3. Adjust the configuration in `bot.py` based on your connection type:
    - **For Serial Connection**: Set the correct serial port (e.g., `/dev/ttyUSB0` on Linux, `COM9` on Windows).
    - **For WiFi Connection**: Set the Meshtastic device's hostname (e.g., the IP address of your WiFi device).
 
-## Running the Bot
+## Запуск бота
 
-Once you have installed the necessary dependencies and configured your connection, you can run the bot using the following command:
+Когда вы установили все необходимые зависимости, можете запустить бота следующей командой:
+```bash
+python bot.py --connection-type <serial|wifi> --hostname <hostname> --serial-port <serial_port> --timezone <timezone>
+```
+
+- **`--connection-type`**: Выбирайте между `serial` (для USB подключения) или `wifi` (для Meshtastic устройств, имеющих WiFi-модуль на борту).
+- **`--hostname`**: Имя устройства в сети или IP адрес вашего Meshtastic устройства (для WiFi подключения).
+- **`--serial-port`**: Последовательный порт, к которому подключено Meshtastic устройство (для Serial подключения).
+- **`--timezone`**: Часовой пояс, по которому будут проставляться метки времени в ответных сообщениях (если не указать, то будет использовано `Europe/Moscow`)
+
+Для Serial подключения:
+```bash
+python bot.py --connection-type serial --serial-port COM9 --timezone Asia/Yekaterinburg
+```
+
+или для WiFi:
 
 ```bash
-python bot.py --connection-type <serial|wifi> --hostname <hostname> --serial-port <serial_port>
+python bot.py --connection-type wifi --hostname <hostname> --timezone Asia/Yekaterinburg
 ```
 
-- **`--connection-type`**: Choose between `serial` (for USB serial connections) or `wifi` (for WiFi-based Meshtastic devices).
-- **`--hostname`**: The hostname or IP address of your Meshtastic device (for WiFi connection).
-- **`--serial-port`**: The serial port where your Meshtastic device is connected (for Serial connection).
+### Примеры ответов бота
 
-For serial:
-```bash
-python bot.py --connection-type serial --serial-port COM9
+`#погода 55.44 37.36 5д` - запрос прогноза погоды в точке с координатами `55.44 северной широты` и `37.36 восточной долготы` (Москва) на 5 дней. В ответ получим следующие сообщения:
+```
+Прогноз для 55.44, 37.36 (5 дней)
+📆 02.02.2025 🌡 -1.2..0.7°C 🌧 0.00mm 💨 3.2m/s 
+📆 03.02.2025 🌡 -1.6..-0.3°C 🌧 1.60mm 💨 2.4m/s 
+📆 04.02.2025 🌡 -2.6..-0.3°C 🌧 0.50mm 💨 1.6m/s 
+📆 05.02.2025 🌡 -3.3..-1.2°C 🌧 0.00mm 💨 3.1m/s 
+📆 06.02.2025 🌡 -2.3..-1.2°C 🌧 0.00mm 💨 2.2m/s 
+📆 07.02.2025 🌡 -4.9..-2.4°C 🌧 0.00mm 💨 3.1m/s 
 ```
 
-or for WiFi:
-
-```bash
-python bot.py --connection-type wifi --hostname <hostname>
+`#погода 55.44 37.36 8ч` - запрос прогноза погоды в точке с координатами `55.44 северной широты` и `37.36 восточной долготы` (Москва) на 8 часов. В ответ получим следующие сообщения:
+```
+Прогноз для 55.44, 37.36 (8 часов)
+🕒 02.02.2025 14:00 🌡 0.5°C 🌧 0.0mm 💨 3.2m/s
+🕒 02.02.2025 15:00 🌡 0.6°C 🌧 0.0mm 💨 3.2m/s
+🕒 02.02.2025 16:00 🌡 0.7°C 🌧 0.0mm 💨 3.0m/s
+🕒 02.02.2025 17:00 🌡 0.5°C 🌧 0.0mm 💨 2.7m/s
+🕒 02.02.2025 18:00 🌡 0.2°C 🌧 0.0mm 💨 2.5m/s
+🕒 02.02.2025 19:00 🌡 -0.4°C 🌧 0.0mm 💨 2.0m/s
+🕒 02.02.2025 20:00 🌡 -1.0°C 🌧 0.0mm 💨 1.4m/s
+🕒 02.02.2025 21:00 🌡 -1.2°C 🌧 0.0mm 💨 1.3m/s
 ```
 
-### Example Output
+`#погода 5h` - запрос прогноза погоды в точке с последними известными координатами устройства на 5 часов. В ответ получим следующие сообщения:
+```
+Прогноз для 55.0000, 56.0000 (5 часов)
+🕒 02.02.2025 14:00 🌡 1.3°C 🌧 0.0mm 💨 2.9m/s
+🕒 02.02.2025 15:00 🌡 1.4°C 🌧 0.0mm 💨 2.8m/s
+🕒 02.02.2025 16:00 🌡 1.3°C 🌧 0.0mm 💨 2.9m/s
+🕒 02.02.2025 17:00 🌡 1.1°C 🌧 0.0mm 💨 3.0m/s
+🕒 02.02.2025 18:00 🌡 0.8°C 🌧 0.0mm 💨 2.8m/s
+```
+В приведенном выше примере бот отправляет ряд сообщений, содержащих почасовые данные о погоде для запрошенного местоположения, включая температуру (°C), осадки (мм) и скорость ветра (м/с). Данные прогноза доставляются партиями по одной записи прогноза за раз, с небольшой задержкой между каждой партией, чтобы избежать перегрузки сообщениями.
 
-```bash
-Received message from !12345678: #weather 27.73568 105.94545
-Fetching weather for Latitude: 27.73568, Longitude: 105.94545, Hours: 24
-Sent message to !12345678: 🌤 **Weather Forecast for Next 24 Hours**
-📍 **Location**: 27.73568, 105.94545
-
-Sent message to !12345678: 🕒 2024-12-06 19:00 | 🌡 19.3°C | 🌧 0.0mm | 💨 10.1km/h
-Sent message to !12345678: 🕒 2024-12-06 21:00 | 🌡 17.9°C | 🌧 0.0mm | 💨 5.5km/h
-Sent message to !12345678: 🕒 2024-12-06 23:00 | 🌡 17.2°C | 🌧 0.0mm | 💨 4.0km/h
-Sent message to !12345678: 🕒 2024-12-07 01:00 | 🌡 16.6°C | 🌧 0.0mm | 💨 5.4km/h
-Sent message to !12345678: 🕒 2024-12-07 03:00 | 🌡 16.1°C | 🌧 0.0mm | 💨 7.6km/h
-Sent message to !12345678: 🕒 2024-12-07 05:00 | 🌡 15.4°C | 🌧 0.0mm | 💨 7.6km/h
-Sent message to !12345678: 🕒 2024-12-07 07:00 | 🌡 15.2°C | 🌧 0.0mm | 💨 4.3km/h
-Sent message to !12345678: 🕒 2024-12-07 09:00 | 🌡 16.5°C | 🌧 0.0mm | 💨 7.6km/h
-Sent message to !12345678: 🕒 2024-12-07 11:00 | 🌡 18.4°C | 🌧 0.0mm | 💨 12.4km/h
-Sent message to !12345678: 🕒 2024-12-07 13:00 | 🌡 20.4°C | 🌧 0.0mm | 💨 10.9km/h
-Sent message to !12345678: 🕒 2024-12-07 15:00 | 🌡 21.3°C | 🌧 0.0mm | 💨 13.0km/h
-Sent message to !12345678: 🕒 2024-12-07 17:00 | 🌡 20.4°C | 🌧 0.0mm | 💨 14.5km/h
+`#помощь` - запрос краткой справки по работе с ботом. В ответ можем получить два вида сообщений:
+1. Когда коордианты устройства известны:
+```
+Ваши координаты известны: lat: 55.0000 lon: 56.0000
+Можете использовать команду #прогноз [Xч | Xд]
+```
+2. Когда координаты устройства не известны:
+```
+Не могу найти ваше местоположение.
+Укажите координаты в формате:
+#прогноз <широта> <долгота> [Xч | Xд]
+например: "#прогноз 55.44 55.58 3д"
 ```
 
-In this example, the bot receives a weather request from a user with the ID `!12345678` for the coordinates `27.73568, 105.94545` (which is in Vietnam). The bot then fetches the weather forecast for the next 24 hours and sends the results as private messages to the user.
 
-### Example Command Input
-
-```
-#weather 27.73568 105.94545 24
-```
-
-- **Latitude**: 27.73568
-- **Longitude**: 105.94545
-- **Hours**: 24 (optional, defaults to 24 if omitted)
-
-### Example Response Output
-
-```
-Sent message to !12345678: 🌤 **Weather Forecast for Next 24 Hours**
-📍 **Location**: 27.73568, 105.94545
-
-Sent message to !12345678: 🕒 2024-12-06 19:00 | 🌡 19.3°C | 🌧 0.0mm | 💨 10.1km/h
-Sent message to !12345678: 🕒 2024-12-06 21:00 | 🌡 17.9°C | 🌧 0.0mm | 💨 5.5km/h
-Sent message to !12345678: 🕒 2024-12-06 23:00 | 🌡 17.2°C | 🌧 0.0mm | 💨 4.0km/h
-...
-```
-
-In the example above, the bot sends a series of messages containing hourly weather data for the requested location, including temperature (°C), precipitation (mm), and wind speed (km/h). The forecast data is delivered in batches of two forecast entries at a time, with a brief delay between each batch to avoid message overload.
 
 ## Code Structure
 
 ### `bot.py`
 
-The main script that runs the Meshtastic bot. It handles:
-- Connecting to the Meshtastic device (either via serial or WiFi).
-- Listening for incoming messages and processing weather-related commands (`#weather`).
-- Sending private messages with weather forecasts to the requesting user.
+Основной скрипт, который запускает бота Meshtastic. Он обрабатывает:
+- Подключение к устройству Meshtastic (через последовательный порт или WiFi).
+- Прослушивание входящих сообщений и обработка команд, связанных с погодой (`#погода`, `#прогноз`, `#weather`, `#forecast`).
+- Отправка личных сообщений с прогнозом погоды запрашивающему пользователю.
 
 ### `weather.py`
 
-The script that fetches weather data from the Open-Meteo API. It includes:
-- **WeatherForecast** class for fetching and processing the weather data.
-- It supports:
-  - **Fetching forecasts** for a specified location (latitude, longitude).
-  - **Parsing the forecast response** from the API and formatting it for display.
+Скрипт, который извлекает данные о погоде из API Open-Meteo. Он включает:
+- Класс **WeatherForecast** для извлечения и обработки данных о погоде.
+- Он поддерживает:
+- **Получение прогнозов** для указанного местоположения (широта, долгота).
+- **Анализ ответа прогноза** из API и его форматирование для отображения.
 
 ## License
 
